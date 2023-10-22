@@ -7,17 +7,17 @@ import router from './router'
 
 const app = createApp(App)
 //app.use(VueQueryPlugin)
-//VueQueryPlugin.install(app,
-    //{
-       // queryClientConfig:
-      //      {
-                //queries:
-                 //   {
-                //        cacheTime : 1000 * 120,//2 minutes
-              //          refetchOnReconnect: 'always',
-            //        }
-          //  }
-    //});
+VueQueryPlugin.install(app,
+    {
+        queryClientConfig:
+            {
+                queries:
+                    {
+                        cacheTime : 1000 * 120,//2 minutes
+                        refetchOnReconnect: 'always',
+                    }
+            }
+    });
 
 app.use(router)
 
