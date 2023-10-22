@@ -1,12 +1,25 @@
-<template>
-  <div id="app">
-    <router-view name="header" />
-    <div class="wrapper">
-      <router-view />
-    </div>
-    <router-view name="footer" />
-  </div>
-</template>
-<script>
-export default {};
+<script setup lang="ts">
+import { RouterLink, RouterView } from 'vue-router';
+import NavBar from "@/shared/components/NavBar.vue";
+import {routerLinks} from "@/router/list-routes";
 </script>
+
+<template>
+  <header>
+    
+   <NavBar title="PokemonApp"
+           :links=routerLinks
+   />
+    
+  </header>
+  
+  
+  <RouterView />
+</template>
+
+<style scoped>
+header {
+  line-height: 1.5;
+  max-height: 100vh;
+}
+</style>
