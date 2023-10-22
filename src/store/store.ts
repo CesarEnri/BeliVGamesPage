@@ -31,7 +31,7 @@ const store = reactive<Store>({
                 ...this.pokemons,
                 isLoading: true,
                 hasError: false,
-                errorMessage: false
+                errorMessage: undefined
             }
         
        // const pokemons = await  getPokemons();
