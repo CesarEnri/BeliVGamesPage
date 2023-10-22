@@ -6,18 +6,7 @@ import App from './App.vue'
 import router from './router'
 
 const app = createApp(App)
-//app.use(VueQueryPlugin)
-VueQueryPlugin.install(app,
-    {
-        queryClientConfig:
-            {
-                queries:
-                    {
-                        cacheTime : 1000 * 120,//2 minutes
-                        refetchOnReconnect: 'always',
-                    }
-            }
-    });
+app.use(VueQueryPlugin)
 
 app.use(router)
 
