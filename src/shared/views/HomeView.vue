@@ -3,7 +3,7 @@
 
 <template>
   <main>
-      <h1>Hola Mundo</h1>
+      <h1>Hola Mundo MI gente</h1>
       <h5>HomeView</h5>
   </main>
 </template>
