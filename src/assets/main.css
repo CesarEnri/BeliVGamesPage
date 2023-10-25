@@ -23,14 +23,14 @@ a,
 }
 
 
-@media (min-width: 1024px) {
+@media (min-width: 375px) {
   body {
     display: flex;
     place-items: center;
     background-repeat: no-repeat, repeat;
-    background-image: url("BeliVGamesWebPageDesign.png"), url("assets/BeliVGamesWebPageDesign.png");
+    background-image: url("BeliVGamesWebPageDesignWeb.webp"), url("BeliVGamesWebPageDesignWeb.webp");
     background-repeat: no-repeat;
-    background-attachment: fixed; 
+   
     background-size: 100% 100%;
   }
 
