@@ -5,12 +5,12 @@ import {routerLinks} from "@/router/list-routes";
 </script>
 
 <template>
-  <header>
+   <header>
     
-   <NavBar title="PokemonApp"
+  <!--  <NavBar title="PokemonApp"
            :links=routerLinks
    />
-    
+     -->
   </header>
   
   
