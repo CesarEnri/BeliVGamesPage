@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Example Website</title>
+    <link rel="icon" href="/src/assets/IconoBeliVGames.ico">
+    <title>BeliVGames</title>
     <style>
         /* Reset default browser styles */
         body, html {
@@ -73,11 +74,25 @@
 
         /* Footer styles */
         footer {
+  background-color: black;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 40px;
+  color: white;
+}
+
+.image-container {
             text-align: center;
-            background-color: #333;
-            color: #fff;
-            padding: 10px 0;
         }
+
+        .image-container img {
+            width: 1000px; /* Tamaño deseado de la imagen */
+            height: auto; /* Altura automática según el ancho */
+            border-radius: 8px; /* Borde redondeado opcional */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+        }
+
     </style>
 </head>
 <body>
@@ -85,17 +100,21 @@
         <nav class="top-menu">
             <ul>
                 <li><a href="#">BELIVGAMES STUDIOS</a></li>
-    
-            </ul>
+            </ul>        
         </nav>
     </header>
 
-  
+   
 
     <main class="content">
-        <h1>Welcome to Our Website</h1>
-        <p>This is a sample webpage layout with navigation menus.</p>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam varius neque nec mauris tincidunt, vitae posuere tellus consectetur. Proin nec posuere metus.</p>
+        <h1>Building Web Site</h1>
+
+        <img src="" />
+
+          <div class="image-container">
+        <img src="src/assets/BeliVGamesWebPageDesignWeb.webp" alt="Imagen de ejemplo">
+    </div>
+
     </main>
 
     <footer>
