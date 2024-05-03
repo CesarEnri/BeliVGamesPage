@@ -1,13 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/src/assets/IconoBeliVGames.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeliVGames</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+    <title>Example Website</title>
+    <style>
+        /* Reset default browser styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Header styles */
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        .top-menu ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .top-menu li {
+            display: inline;
+            margin-right: 20px;
+        }
+
+        .top-menu a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .top-menu a:hover {
+            text-decoration: underline;
+        }
+
+        /* Sidebar styles */
+        .sidebar {
+            background-color: #f2f2f2;
+            width: 200px;
+            float: left;
+            padding: 20px;
+        }
+
+        .side-menu ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .side-menu li {
+            margin-bottom: 10px;
+        }
+
+        .side-menu a {
+            color: #333;
+            text-decoration: none;
+        }
+
+        .side-menu a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main content styles */
+        .content {
+            margin-left: 220px; /* Sidebar width + some padding */
+            padding: 20px;
+        }
+
+        /* Footer styles */
+        footer {
+            text-align: center;
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="top-menu">
+            <ul>
+                <li><a href="#">BELIVGAMES STUDIOS</a></li>
+    
+            </ul>
+        </nav>
+    </header>
+
+  
+
+    <main class="content">
+        <h1>Welcome to Our Website</h1>
+        <p>This is a sample webpage layout with navigation menus.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam varius neque nec mauris tincidunt, vitae posuere tellus consectetur. Proin nec posuere metus.</p>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 BelivGames Studios. All Rights Reserved.</p>
+    </footer>
+</body>
 </html>
