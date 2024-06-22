@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../shared/views/HomeView.vue'
 import AboutView from "@/shared/views/AboutView.vue";
+import PrivacySpaceSurfers from "@/shared/views/PrivacySpaceSurfers.vue";
 import {pokemonRoute} from "@/pokemons/router";
 
 const router = createRouter({
@@ -15,6 +16,11 @@ const router = createRouter({
       path: '/about',
       name: 'About',
       component: AboutView
+    },
+    {
+      path: '/privacyspacesurfers',
+      name: 'PrivacySpaceSurfers',
+      component: PrivacySpaceSurfers
     },
     {
       path: '/counter',

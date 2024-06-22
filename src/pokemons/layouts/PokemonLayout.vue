@@ -33,6 +33,9 @@ const routerLinks: RouterLink[] = pokemonRoute.children?.map(({name, path, props
 <!--       -->
 <!--     </template>-->
 <!--   </suspense>-->
+ <p>
+  asdasdasdsdasd
+ </p>
     
   </div>
 </template>

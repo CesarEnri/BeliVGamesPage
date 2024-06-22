@@ -3,8 +3,12 @@
 
 <template>
   <main>
-  
-    <!--  <h1>Hola Mundo</h1>
-      <h5>HomeView</h5> -->
+    <h1>Building Web Site</h1>
+
+<img src="" />
+
+  <div class="image-container">
+<img src="src/assets/BeliVGamesWebPageDesignWeb.webp" alt="Imagen de ejemplo">
+</div>
   </main>
 </template>
