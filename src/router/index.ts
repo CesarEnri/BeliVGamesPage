@@ -22,11 +22,7 @@ const router = createRouter({
       name: 'PrivacySpaceSurfers',
       component: PrivacySpaceSurfers
     },
-    {
-      path: '/counter',
-      name: 'counter',
-      component: () => import('../counter/views/CounterView.vue'),
-    },
+
     {
       ...pokemonRoute,
       path: '/pokemons',
