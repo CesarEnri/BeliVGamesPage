@@ -4,7 +4,7 @@
 <template>
   <main>
 
-    <h1 style="color: black;">Privcay Space Surfers</h1>
+    <h1 style="color: black;">Privcay Space Surfers Adventure</h1>
       <p style="color: black;">
         Privacy Policy
 
