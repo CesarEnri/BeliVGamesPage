@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+</head>
+<body>
+    <h1>Chat WebSocket</h1>
+    <input id="room" placeholder="ID de sala" autocomplete="off">
+    <input id="username" placeholder="Nombre de usuario" autocomplete="off">
+    <input id="message" placeholder="Escribe un mensaje" autocomplete="off">
+    <input id="recipient" placeholder="Destinatario (privado, opcional)" autocomplete="off">
+    <button onclick="sendMessage()">Enviar</button>
+
+    <ul id="messages"></ul>
+
+    <script>
+        let ws;
+
+        function connect() {
+            const room = document.getElementById("room").value;
+            //ws = new WebSocket("ws://localhost:8080/ws");
+
+            //ws = new WebSocket("wss://turbo-eureka-6v4vgrg4jxpc4v7x-8080.app.github.dev/ws"); // Usa la IP de la máquina del servidor Go
+            ws = new WebSocket("wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8080.app.github.dev/ws");
+
+            ws.onopen = function() {
+                // Envía la sala al conectarse
+                ws.send(JSON.stringify(room));
+            };
+
+            ws.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                const el = document.createElement("li");
+                el.innerHTML = `<strong>${message.username}:</strong> ${message.message}`;
+                document.getElementById("messages").appendChild(el);
+            };
+        }
+
+        function sendMessage() {
+            //connect()
+            const room = document.getElementById("room").value;
+            const username = document.getElementById("username").value;
+            const message = document.getElementById("message").value;
+            const recipient = document.getElementById("recipient").value;
+
+            ws.send(JSON.stringify({
+                room: room,
+                username: username,
+                message: message,
+                recipient: recipient
+            }));
+        }
+
+        document.getElementById("room").addEventListener("change", connect);
+    </script>
+</body>
+</html>
