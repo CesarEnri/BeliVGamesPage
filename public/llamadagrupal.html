@@ -57,7 +57,11 @@
                     // Manejar recepción de audio remoto
                     peerConnections[from].ontrack = (event) => {
                         if (event.track.kind === 'audio') {
-                            remoteAudio.srcObject = event.streams[0];
+                            // Crear un nuevo elemento de audio para cada flujo remoto
+                            let audio = document.createElement('audio');
+                            audio.autoplay = true;
+                            audio.srcObject = event.streams[0];
+                            document.body.appendChild(audio);
                         }
                     };
                 }
@@ -81,7 +85,6 @@
         };
 
         callButton.onclick = async () => {
-            // Capturar audio del micrófono y crear conexiones para cada participante
             const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             // Crear una conexión para cada participante
