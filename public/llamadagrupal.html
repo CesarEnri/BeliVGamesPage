@@ -37,7 +37,6 @@
                 return;
             }
 
-            // Conectar al servidor WebSocket
             signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID); // Cambia a la URL correcta de tu servidor
 
             signalingServer.onmessage = async (message) => {
@@ -47,14 +46,12 @@
                 if (!peerConnections[from]) {
                     peerConnections[from] = new RTCPeerConnection(configuration);
 
-                    // Manejar ICE Candidates
                     peerConnections[from].onicecandidate = (event) => {
                         if (event.candidate) {
                             signalingServer.send(JSON.stringify({ iceCandidate: event.candidate, to: from }));
                         }
                     };
 
-                    // Manejar recepción de audio remoto
                     peerConnections[from].ontrack = (event) => {
                         if (event.track.kind === 'audio') {
                             let audio = document.createElement('audio');
@@ -78,7 +75,6 @@
             };
 
             signalingServer.onopen = () => {
-                // Habilitar el botón para iniciar la llamada una vez conectado a la sala
                 callButton.disabled = false;
             };
         };
