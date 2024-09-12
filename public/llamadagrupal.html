@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Llamada de Audio WebRTC - Sala Privada</title>
+    <style>
+        #sharedScreenContainer video {
+            width: 100%;
+            max-height: 500px;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
     <h1>WebRTC - Llamada de Audio en Sala Privada</h1>
@@ -42,7 +49,7 @@
             }
 
             // Conectar al servidor WebSocket
-            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID);
+            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/' + roomID);
 
             signalingServer.onmessage = async (message) => {
                 const data = JSON.parse(message.data);
@@ -61,7 +68,7 @@
                         console.error('Error al añadir candidato ICE:', e);
                     }
                 } else if (data.screenShare) {
-                    // Si se está compartiendo pantalla, actualizar la interfaz
+                    // Mostrar pantalla compartida
                     console.log('Se está compartiendo pantalla');
                 }
             };
@@ -97,11 +104,13 @@
                     remoteAudio.srcObject = event.streams[0];
                 } else if (event.track.kind === 'video') {
                     // Crear un nuevo elemento de video para la pantalla compartida
-                    const screenVideo = document.createElement('video');
-                    screenVideo.autoplay = true;
+                    let screenVideo = document.querySelector('#sharedScreenContainer video');
+                    if (!screenVideo) {
+                        screenVideo = document.createElement('video');
+                        screenVideo.autoplay = true;
+                        sharedScreenContainer.appendChild(screenVideo);
+                    }
                     screenVideo.srcObject = event.streams[0];
-                    sharedScreenContainer.innerHTML = ''; // Limpiar el contenedor
-                    sharedScreenContainer.appendChild(screenVideo);
                 }
             };
 
