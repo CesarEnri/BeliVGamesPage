@@ -115,12 +115,13 @@
                 if (event.track.kind === 'audio') {
                     remoteAudio.srcObject = event.streams[0];
                 } else if (event.track.kind === 'video') {
+                    console.log('SEsta llegando video');
                     // Verificar si ya existe un video para la pantalla compartida
                     let screenVideo = sharedScreenContainer.querySelector('video');
                     if (!screenVideo) {
                         screenVideo = document.createElement('video');
                         screenVideo.autoplay = true;
-                        screenVideo.playsInline = true; // Para evitar que el video se reproduzca en pantalla completa en algunos navegadores móviles
+                        screenVideo.playsInline = false; // Para evitar que el video se reproduzca en pantalla completa en algunos navegadores móviles
                         sharedScreenContainer.appendChild(screenVideo);
                     }
                     screenVideo.srcObject = event.streams[0];
