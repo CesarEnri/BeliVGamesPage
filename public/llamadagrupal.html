@@ -12,14 +12,14 @@
     <button id="callButton" disabled>Iniciar Llamada</button>
     <button id="hangupButton" disabled>Terminar Llamada</button>
 
-    <audio id="remoteAudio" autoplay></audio>
+    <div id="remoteAudioContainer"></div>
 
     <script>
         const joinRoomButton = document.getElementById('joinRoomButton');
         const callButton = document.getElementById('callButton');
         const hangupButton = document.getElementById('hangupButton');
         const roomInput = document.getElementById('roomInput');
-        const remoteAudio = document.getElementById('remoteAudio');
+        const remoteAudioContainer = document.getElementById('remoteAudioContainer');
         let peerConnections = {}; // Almacena las conexiones RTCPeerConnection
         let signalingServer;
         let roomID = '';
@@ -57,11 +57,10 @@
                     // Manejar recepción de audio remoto
                     peerConnections[from].ontrack = (event) => {
                         if (event.track.kind === 'audio') {
-                            // Crear un nuevo elemento de audio para cada flujo remoto
                             let audio = document.createElement('audio');
                             audio.autoplay = true;
                             audio.srcObject = event.streams[0];
-                            document.body.appendChild(audio);
+                            remoteAudioContainer.appendChild(audio);
                         }
                     };
                 }
@@ -87,11 +86,9 @@
         callButton.onclick = async () => {
             const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            // Crear una conexión para cada participante
             for (const [id, peerConnection] of Object.entries(peerConnections)) {
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                // Crear la oferta y enviarla al servidor de señalización
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 signalingServer.send(JSON.stringify({ offer, to: id }));
@@ -102,7 +99,6 @@
         };
 
         hangupButton.onclick = () => {
-            // Cerrar todas las conexiones
             for (const peerConnection of Object.values(peerConnections)) {
                 peerConnection.close();
             }
