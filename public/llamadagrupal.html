@@ -5,10 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Llamada de Audio WebRTC - Sala Privada</title>
     <style>
-        #sharedScreenContainer video {
+        /* Asegurar que el contenedor tenga un tamaño visible */
+        #sharedScreenContainer {
             width: 100%;
             max-height: 500px;
             border: 1px solid #ddd;
+            overflow: hidden; /* Para evitar desbordamiento del contenido */
+            display: flex; /* Usar flexbox para centrar el video */
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Asegurar que el video ocupe el contenedor adecuadamente */
+        #sharedScreenContainer video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ajusta el video para que se ajuste al contenedor */
         }
     </style>
 </head>
@@ -49,7 +61,7 @@
             }
 
             // Conectar al servidor WebSocket
-            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID);
+            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/' + roomID);
 
             signalingServer.onmessage = async (message) => {
                 const data = JSON.parse(message.data);
@@ -68,7 +80,7 @@
                         console.error('Error al añadir candidato ICE:', e);
                     }
                 } else if (data.screenShare) {
-                    // Mostrar pantalla compartida
+                    // Si se está compartiendo pantalla, actualizar la interfaz
                     console.log('Se está compartiendo pantalla');
                 }
             };
@@ -103,11 +115,12 @@
                 if (event.track.kind === 'audio') {
                     remoteAudio.srcObject = event.streams[0];
                 } else if (event.track.kind === 'video') {
-                    // Crear un nuevo elemento de video para la pantalla compartida
-                    let screenVideo = document.querySelector('#sharedScreenContainer video');
+                    // Verificar si ya existe un video para la pantalla compartida
+                    let screenVideo = sharedScreenContainer.querySelector('video');
                     if (!screenVideo) {
                         screenVideo = document.createElement('video');
                         screenVideo.autoplay = true;
+                        screenVideo.playsInline = true; // Para evitar que el video se reproduzca en pantalla completa en algunos navegadores móviles
                         sharedScreenContainer.appendChild(screenVideo);
                     }
                     screenVideo.srcObject = event.streams[0];
