@@ -14,6 +14,7 @@
     <button id="shareScreenButton" disabled>Compartir Pantalla</button>
 
     <audio id="remoteAudio" autoplay></audio>
+    <div id="sharedScreenContainer"></div>
 
     <script>
         const joinRoomButton = document.getElementById('joinRoomButton');
@@ -22,6 +23,7 @@
         const shareScreenButton = document.getElementById('shareScreenButton');
         const roomInput = document.getElementById('roomInput');
         const remoteAudio = document.getElementById('remoteAudio');
+        const sharedScreenContainer = document.getElementById('sharedScreenContainer');
         let peerConnection;
         let signalingServer;
         let roomID = '';
@@ -59,8 +61,8 @@
                         console.error('Error al añadir candidato ICE:', e);
                     }
                 } else if (data.screenShare) {
-                    // Mostrar la pantalla compartida
-                    // (Este código puede variar dependiendo de cómo quieras mostrar la pantalla)
+                    // Si se está compartiendo pantalla, actualizar la interfaz
+                    console.log('Se está compartiendo pantalla');
                 }
             };
 
@@ -89,15 +91,17 @@
                 }
             };
 
-            // Manejar recepción de audio remoto
+            // Manejar recepción de audio y video remoto
             peerConnection.ontrack = (event) => {
                 if (event.track.kind === 'audio') {
                     remoteAudio.srcObject = event.streams[0];
                 } else if (event.track.kind === 'video') {
+                    // Crear un nuevo elemento de video para la pantalla compartida
                     const screenVideo = document.createElement('video');
                     screenVideo.autoplay = true;
                     screenVideo.srcObject = event.streams[0];
-                    document.body.appendChild(screenVideo);
+                    sharedScreenContainer.innerHTML = ''; // Limpiar el contenedor
+                    sharedScreenContainer.appendChild(screenVideo);
                 }
             };
 
@@ -124,6 +128,7 @@
             callButton.disabled = false;
             hangupButton.disabled = true;
             shareScreenButton.disabled = true;
+            sharedScreenContainer.innerHTML = ''; // Limpiar el contenedor de pantalla compartida
         };
     </script>
 </body>
