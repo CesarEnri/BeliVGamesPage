@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Llamada de Audio WebRTC - Sala Privada</title>
+</head>
+<body>
+    <h1>WebRTC - Llamada de Audio en Sala Privada</h1>
+    <input type="text" id="roomInput" placeholder="Introduce el ID de la sala">
+    <button id="joinRoomButton">Unirse a la sala</button>
+    <button id="callButton" disabled>Iniciar Llamada</button>
+    <button id="hangupButton" disabled>Terminar Llamada</button>
+
+    <audio id="remoteAudio" autoplay></audio>
+
+    <script>
+        const joinRoomButton = document.getElementById('joinRoomButton');
+        const callButton = document.getElementById('callButton');
+        const hangupButton = document.getElementById('hangupButton');
+        const roomInput = document.getElementById('roomInput');
+        const remoteAudio = document.getElementById('remoteAudio');
+        let peerConnections = {}; // Almacena las conexiones RTCPeerConnection
+        let signalingServer;
+        let roomID = '';
+
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' } // Servidor STUN
+            ]
+        };
+
+        joinRoomButton.onclick = async () => {
+            roomID = roomInput.value;
+            if (!roomID) {
+                alert("Por favor, introduce un ID de sala.");
+                return;
+            }
+
+            // Conectar al servidor WebSocket
+            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID); // Cambia a la URL correcta de tu servidor
+
+            signalingServer.onmessage = async (message) => {
+                const data = JSON.parse(message.data);
+                const from = data.from;
+
+                if (!peerConnections[from]) {
+                    peerConnections[from] = new RTCPeerConnection(configuration);
+
+                    // Manejar ICE Candidates
+                    peerConnections[from].onicecandidate = (event) => {
+                        if (event.candidate) {
+                            signalingServer.send(JSON.stringify({ iceCandidate: event.candidate, to: from }));
+                        }
+                    };
+
+                    // Manejar recepción de audio remoto
+                    peerConnections[from].ontrack = (event) => {
+                        if (event.track.kind === 'audio') {
+                            remoteAudio.srcObject = event.streams[0];
+                        }
+                    };
+                }
+
+                if (data.offer) {
+                    await peerConnections[from].setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnections[from].createAnswer();
+                    await peerConnections[from].setLocalDescription(answer);
+                    signalingServer.send(JSON.stringify({ answer, to: from }));
+                } else if (data.answer) {
+                    await peerConnections[from].setRemoteDescription(new RTCSessionDescription(data.answer));
+                } else if (data.iceCandidate) {
+                    await peerConnections[from].addIceCandidate(data.iceCandidate);
+                }
+            };
+
+            signalingServer.onopen = () => {
+                // Habilitar el botón para iniciar la llamada una vez conectado a la sala
+                callButton.disabled = false;
+            };
+        };
+
+        callButton.onclick = async () => {
+            // Capturar audio del micrófono y crear conexiones para cada participante
+            const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // Crear una conexión para cada participante
+            for (const [id, peerConnection] of Object.entries(peerConnections)) {
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                // Crear la oferta y enviarla al servidor de señalización
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                signalingServer.send(JSON.stringify({ offer, to: id }));
+            }
+
+            callButton.disabled = true;
+            hangupButton.disabled = false;
+        };
+
+        hangupButton.onclick = () => {
+            // Cerrar todas las conexiones
+            for (const peerConnection of Object.values(peerConnections)) {
+                peerConnection.close();
+            }
+            signalingServer.close();
+            callButton.disabled = false;
+            hangupButton.disabled = true;
+        };
+    </script>
+</body>
+</html>
