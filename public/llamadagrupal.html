@@ -59,7 +59,7 @@
             }
 
             // Conectar al servidor WebSocket
-            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/' + roomID);
+            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID);
 
             signalingServer.onmessage = async (message) => {
                 const data = JSON.parse(message.data);
