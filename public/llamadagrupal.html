@@ -11,16 +11,18 @@
     <button id="joinRoomButton">Unirse a la sala</button>
     <button id="callButton" disabled>Iniciar Llamada</button>
     <button id="hangupButton" disabled>Terminar Llamada</button>
+    <button id="shareScreenButton" disabled>Compartir Pantalla</button>
 
-    <div id="remoteAudioContainer"></div>
+    <audio id="remoteAudio" autoplay></audio>
 
     <script>
         const joinRoomButton = document.getElementById('joinRoomButton');
         const callButton = document.getElementById('callButton');
         const hangupButton = document.getElementById('hangupButton');
+        const shareScreenButton = document.getElementById('shareScreenButton');
         const roomInput = document.getElementById('roomInput');
-        const remoteAudioContainer = document.getElementById('remoteAudioContainer');
-        let peerConnections = {}; // Almacena las conexiones RTCPeerConnection
+        const remoteAudio = document.getElementById('remoteAudio');
+        let peerConnection;
         let signalingServer;
         let roomID = '';
 
@@ -37,70 +39,91 @@
                 return;
             }
 
-            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID); // Cambia a la URL correcta de tu servidor
+            // Conectar al servidor WebSocket
+            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID);
 
             signalingServer.onmessage = async (message) => {
                 const data = JSON.parse(message.data);
-                const from = data.from;
-
-                if (!peerConnections[from]) {
-                    peerConnections[from] = new RTCPeerConnection(configuration);
-
-                    peerConnections[from].onicecandidate = (event) => {
-                        if (event.candidate) {
-                            signalingServer.send(JSON.stringify({ iceCandidate: event.candidate, to: from }));
-                        }
-                    };
-
-                    peerConnections[from].ontrack = (event) => {
-                        if (event.track.kind === 'audio') {
-                            let audio = document.createElement('audio');
-                            audio.autoplay = true;
-                            audio.srcObject = event.streams[0];
-                            remoteAudioContainer.appendChild(audio);
-                        }
-                    };
-                }
 
                 if (data.offer) {
-                    await peerConnections[from].setRemoteDescription(new RTCSessionDescription(data.offer));
-                    const answer = await peerConnections[from].createAnswer();
-                    await peerConnections[from].setLocalDescription(answer);
-                    signalingServer.send(JSON.stringify({ answer, to: from }));
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    signalingServer.send(JSON.stringify({ answer }));
                 } else if (data.answer) {
-                    await peerConnections[from].setRemoteDescription(new RTCSessionDescription(data.answer));
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                 } else if (data.iceCandidate) {
-                    await peerConnections[from].addIceCandidate(data.iceCandidate);
+                    try {
+                        await peerConnection.addIceCandidate(data.iceCandidate);
+                    } catch (e) {
+                        console.error('Error al añadir candidato ICE:', e);
+                    }
+                } else if (data.screenShare) {
+                    // Mostrar la pantalla compartida
+                    // (Este código puede variar dependiendo de cómo quieras mostrar la pantalla)
                 }
             };
 
             signalingServer.onopen = () => {
+                // Habilitar el botón para iniciar la llamada una vez conectado a la sala
                 callButton.disabled = false;
             };
         };
 
         callButton.onclick = async () => {
+            peerConnection = new RTCPeerConnection(configuration);
+
+            // Capturar audio del micrófono
             const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-            for (const [id, peerConnection] of Object.entries(peerConnections)) {
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            // Crear la oferta y enviarla al servidor de señalización
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            signalingServer.send(JSON.stringify({ offer }));
 
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                signalingServer.send(JSON.stringify({ offer, to: id }));
-            }
+            // Manejar ICE Candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalingServer.send(JSON.stringify({ iceCandidate: event.candidate }));
+                }
+            };
+
+            // Manejar recepción de audio remoto
+            peerConnection.ontrack = (event) => {
+                if (event.track.kind === 'audio') {
+                    remoteAudio.srcObject = event.streams[0];
+                } else if (event.track.kind === 'video') {
+                    const screenVideo = document.createElement('video');
+                    screenVideo.autoplay = true;
+                    screenVideo.srcObject = event.streams[0];
+                    document.body.appendChild(screenVideo);
+                }
+            };
 
             callButton.disabled = true;
             hangupButton.disabled = false;
+            shareScreenButton.disabled = false;
+        };
+
+        shareScreenButton.onclick = async () => {
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenStream.getTracks().forEach(track => peerConnection.addTrack(track, screenStream));
+
+                // Enviar una señal para indicar que se está compartiendo pantalla
+                signalingServer.send(JSON.stringify({ screenShare: true }));
+            } catch (e) {
+                console.error('Error al compartir pantalla:', e);
+            }
         };
 
         hangupButton.onclick = () => {
-            for (const peerConnection of Object.values(peerConnections)) {
-                peerConnection.close();
-            }
+            peerConnection.close();
             signalingServer.close();
             callButton.disabled = false;
             hangupButton.disabled = true;
+            shareScreenButton.disabled = true;
         };
     </script>
 </body>
