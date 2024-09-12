@@ -5,22 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Llamada de Audio WebRTC - Sala Privada</title>
     <style>
-        /* Asegurar que el contenedor tenga un tamaño visible */
         #sharedScreenContainer {
             width: 100%;
             max-height: 500px;
             border: 1px solid #ddd;
-            overflow: hidden; /* Para evitar desbordamiento del contenido */
-            display: flex; /* Usar flexbox para centrar el video */
+            overflow: hidden;
+            display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* Asegurar que el video ocupe el contenedor adecuadamente */
         #sharedScreenContainer video {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Ajusta el video para que se ajuste al contenedor */
+            object-fit: contain;
         }
     </style>
 </head>
@@ -61,7 +59,7 @@
             }
 
             // Conectar al servidor WebSocket
-            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/signal/' + roomID);
+            signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/' + roomID);
 
             signalingServer.onmessage = async (message) => {
                 const data = JSON.parse(message.data);
@@ -80,13 +78,28 @@
                         console.error('Error al añadir candidato ICE:', e);
                     }
                 } else if (data.screenShare) {
-                    // Si se está compartiendo pantalla, actualizar la interfaz
                     console.log('Se está compartiendo pantalla');
+                    
+                    // Crear un nuevo video para el contenido compartido si no existe
+                    let screenVideo = sharedScreenContainer.querySelector('video');
+                    if (!screenVideo) {
+                        screenVideo = document.createElement('video');
+                        screenVideo.autoplay = true;
+                        screenVideo.playsInline = true;
+                        sharedScreenContainer.appendChild(screenVideo);
+                    }
+
+                    // Asignar el stream de pantalla compartida al video
+                    peerConnection.ontrack = (event) => {
+                        if (event.track.kind === 'video') {
+                            console.log('Está llegando video compartido');
+                            screenVideo.srcObject = event.streams[0];
+                        }
+                    };
                 }
             };
 
             signalingServer.onopen = () => {
-                // Habilitar el botón para iniciar la llamada una vez conectado a la sala
                 callButton.disabled = false;
             };
         };
@@ -110,24 +123,23 @@
                 }
             };
 
+            // Manejar recepción de audio y video remoto
             peerConnection.ontrack = (event) => {
-    console.log('Evento ontrack:', event);
-    console.log('Streams en el evento:', event.streams);
-
-    if (event.track.kind === 'audio') {
-        remoteAudio.srcObject = event.streams[0];
-    } else if (event.track.kind === 'video') {
-        console.log('Está llegando video');
-        let screenVideo = sharedScreenContainer.querySelector('video');
-        if (!screenVideo) {
-            screenVideo = document.createElement('video');
-            screenVideo.autoplay = true;
-            screenVideo.playsInline = false; // Para evitar que el video se reproduzca en pantalla completa en algunos navegadores móviles
-            sharedScreenContainer.appendChild(screenVideo);
-        }
-        screenVideo.srcObject = event.streams[0];
-    }
-};
+                console.log('Evento ontrack:', event);
+                if (event.track.kind === 'audio') {
+                    remoteAudio.srcObject = event.streams[0];
+                } else if (event.track.kind === 'video') {
+                    console.log('Está llegando video');
+                    let screenVideo = sharedScreenContainer.querySelector('video');
+                    if (!screenVideo) {
+                        screenVideo = document.createElement('video');
+                        screenVideo.autoplay = true;
+                        screenVideo.playsInline = true;
+                        sharedScreenContainer.appendChild(screenVideo);
+                    }
+                    screenVideo.srcObject = event.streams[0];
+                }
+            };
 
             callButton.disabled = true;
             hangupButton.disabled = false;
