@@ -3,139 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Multipeer Communication</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        video {
-            width: 45%;
-            height: auto;
-            margin: 10px;
-            border: 1px solid #ccc;
-        }
-    </style>
+    <title>Llamada de Audio WebRTC - Sala Privada</title>
 </head>
 <body>
-    <h1>WebRTC Multipeer Communication</h1>
-    <input type="text" id="roomID" placeholder="Enter Room ID" />
-    <button id="joinRoom">Join Room</button>
-    <br>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
+    <h1>WebRTC - Llamada de Audio en Sala Privada</h1>
+    <input type="text" id="roomInput" placeholder="Introduce el ID de la sala">
+    <button id="joinRoomButton">Unirse a la sala</button>
+    <button id="callButton" disabled>Iniciar Llamada</button>
+    <button id="hangupButton" disabled>Terminar Llamada</button>
+
+    <audio id="remoteAudio" autoplay></audio>
 
     <script>
-        let signalingSocket;
-        let peerConnection;
-        let localStream;
-        const peerConnectionConfig = {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        };
+ const joinRoomButton = document.getElementById('joinRoomButton');
+const callButton = document.getElementById('callButton');
+const hangupButton = document.getElementById('hangupButton');
+const roomInput = document.getElementById('roomInput');
+const remoteAudio = document.getElementById('remoteAudio');
+let peerConnections = {};
+let signalingServer;
+let roomID = '';
 
-        document.getElementById('joinRoom').addEventListener('click', () => {
-            const roomID = document.getElementById('roomID').value;
-            if (roomID) {
-                start(roomID);
-            } else {
-                alert('Please enter a Room ID');
-            }
-        });
+const configuration = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' } // Servidor STUN
+    ]
+};
 
-        // Función para iniciar la conexión
-        async function start(roomID) {
-            const signalingServerUrl = `wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/${roomID}`;
+joinRoomButton.onclick = async () => {
+    roomID = roomInput.value;
+    if (!roomID) {
+        alert("Por favor, introduce un ID de sala.");
+        return;
+    }
 
-            signalingSocket = new WebSocket(signalingServerUrl);
+    // Conectar al servidor WebSocket
+    signalingServer = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/' + roomID);
 
-            signalingSocket.onmessage = async (message) => {
-                const data = JSON.parse(message.data);
+    signalingServer.onmessage = async (message) => {
+        const data = JSON.parse(message.data);
 
-                switch (data.type) {
-                    case 'offer':
-                        await handleOffer(data.offer);
-                        break;
-                    case 'answer':
-                        await handleAnswer(data.answer);
-                        break;
-                    case 'candidate':
-                        await handleCandidate(data.candidate);
-                        break;
-                }
-            };
+        if (data.offer) {
+            const peerConnection = new RTCPeerConnection(configuration);
+            peerConnections[data.sender] = peerConnection;
 
-            signalingSocket.onopen = async () => {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('localVideo').srcObject = localStream;
-
-                peerConnection = new RTCPeerConnection(peerConnectionConfig);
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        signalingSocket.send(JSON.stringify({
-                            type: 'candidate',
-                            candidate: event.candidate
-                        }));
-                    }
-                };
-                peerConnection.ontrack = (event) => {
-                    document.getElementById('remoteVideo').srcObject = event.streams[0];
-                };
-
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-
-                // Enviar oferta al servidor de señalización
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                signalingSocket.send(JSON.stringify({
-                    type: 'offer',
-                    offer: offer
-                }));
-            };
-        }
-
-        // Manejar la oferta recibida
-        async function handleOffer(offer) {
-            peerConnection = new RTCPeerConnection(peerConnectionConfig);
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    signalingSocket.send(JSON.stringify({
-                        type: 'candidate',
-                        candidate: event.candidate
-                    }));
-                }
-            };
-            peerConnection.ontrack = (event) => {
-                document.getElementById('remoteVideo').srcObject = event.streams[0];
-            };
-
-            peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
-            signalingSocket.send(JSON.stringify({
-                type: 'answer',
-                answer: answer
-            }));
-        }
+            signalingServer.send(JSON.stringify({ answer, sender: data.sender }));
 
-        // Manejar la respuesta recibida
-        async function handleAnswer(answer) {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        }
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalingServer.send(JSON.stringify({ iceCandidate: event.candidate, sender: data.sender }));
+                }
+            };
 
-        // Manejar el candidato ICE recibido
-        async function handleCandidate(candidate) {
-            try {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (e) {
-                console.error('Error al añadir candidato ICE:', e);
+            peerConnection.ontrack = (event) => {
+                if (event.track.kind === 'audio') {
+                    remoteAudio.srcObject = event.streams[0];
+                }
+            };
+        } else if (data.answer) {
+            const peerConnection = peerConnections[data.sender];
+            if (peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            }
+        } else if (data.iceCandidate) {
+            const peerConnection = peerConnections[data.sender];
+            if (peerConnection) {
+                try {
+                    await peerConnection.addIceCandidate(data.iceCandidate);
+                } catch (e) {
+                    console.error('Error al añadir candidato ICE:', e);
+                }
             }
         }
+    };
+
+    signalingServer.onopen = () => {
+        callButton.disabled = false;
+    };
+};
+
+callButton.onclick = async () => {
+    const peerConnection = new RTCPeerConnection(configuration);
+    const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            signalingServer.send(JSON.stringify({ iceCandidate: event.candidate, sender: 'self' }));
+        }
+    };
+
+    peerConnection.ontrack = (event) => {
+        if (event.track.kind === 'audio') {
+            remoteAudio.srcObject = event.streams[0];
+        }
+    };
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    signalingServer.send(JSON.stringify({ offer, sender: 'self' }));
+
+    peerConnections['self'] = peerConnection;
+
+    callButton.disabled = true;
+    hangupButton.disabled = false;
+};
+
+hangupButton.onclick = () => {
+    for (const id in peerConnections) {
+        peerConnections[id].close();
+    }
+    peerConnections = {};
+    signalingServer.close();
+    callButton.disabled = false;
+    hangupButton.disabled = true;
+};
+
     </script>
 </body>
 </html>
