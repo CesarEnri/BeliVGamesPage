@@ -1,68 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC SFU</title>
+    <title>WebRTC Group Call</title>
 </head>
 <body>
-    <h1>WebRTC SFU</h1>
     <video id="localVideo" autoplay muted></video>
     <video id="remoteVideo" autoplay></video>
-
     <script>
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
-        const ws = new WebSocket('wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8080.app.github.dev/sfu');
+        const signalingServerUrl = 'wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8082.app.github.dev/ws';
+        const peerConnections = {};
+        const localStream = null;
 
-        let localStream;
-        let peerConnection;
+        const ws = new WebSocket(signalingServerUrl);
 
-        async function startStream() {
-            // Captura el video local
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            localVideo.srcObject = localStream;
+        ws.onmessage = (message) => {
+            const data = JSON.parse(message.data);
 
-            // Configura una nueva conexión WebRTC
-            peerConnection = new RTCPeerConnection();
-
-            // Añade el stream local al peerConnection
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            // Cuando se recibe un stream remoto, se muestra en el video remoteVideo
-            peerConnection.ontrack = event => {
-                remoteVideo.srcObject = event.streams[0];
-            };
-
-            // Intercambio de ICE candidates
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    ws.send(JSON.stringify(event.candidate));
-                }
-            };
-
-            // Crear una oferta SDP
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-
-            // Envía la oferta SDP al servidor
-            ws.send(JSON.stringify(offer));
-        }
-
-        ws.onmessage = async (event) => {
-            const message = JSON.parse(event.data);
-
-            if (message.type === "answer") {
-                // Recibir respuesta (answer) del servidor SFU
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(message));
-            } else if (message.candidate) {
-                // Recibir las ICE candidates del servidor SFU
-                await peerConnection.addIceCandidate(new RTCIceCandidate(message));
+            if (data.offer) {
+                handleOffer(data.offer, data.from);
+            } else if (data.answer) {
+                handleAnswer(data.answer, data.from);
+            } else if (data.iceCandidate) {
+                handleIceCandidate(data.iceCandidate, data.from);
             }
         };
 
-        // Iniciar stream al cargar la página
-        window.onload = startStream;
+        ws.onopen = () => {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    document.getElementById('localVideo').srcObject = stream;
+                    localStream = stream;
+
+                    // Broadcast a new user joining the call
+                    ws.send(JSON.stringify({ type: 'newUser' }));
+                })
+                .catch(error => console.error('Error accessing media devices.', error));
+        };
+
+        function handleOffer(offer, from) {
+            const pc = new RTCPeerConnection();
+            peerConnections[from] = pc;
+
+            localStream.getTracks().forEach(track => {
+                pc.addTrack(track, localStream);
+            });
+
+            pc.ontrack = (event) => {
+                document.getElementById('remoteVideo').srcObject = event.streams[0];
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({
+                        iceCandidate: event.candidate,
+                        to: from
+                    }));
+                }
+            };
+
+            pc.setRemoteDescription(new RTCSessionDescription(offer))
+                .then(() => pc.createAnswer())
+                .then(answer => pc.setLocalDescription(answer))
+                .then(() => {
+                    ws.send(JSON.stringify({
+                        answer: pc.localDescription,
+                        to: from
+                    }));
+                });
+        }
+
+        function handleAnswer(answer, from) {
+            peerConnections[from].setRemoteDescription(new RTCSessionDescription(answer));
+        }
+
+        function handleIceCandidate(candidate, from) {
+            peerConnections[from].addIceCandidate(new RTCIceCandidate(candidate));
+        }
     </script>
 </body>
 </html>
