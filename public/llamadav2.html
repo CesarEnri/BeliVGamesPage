@@ -4,8 +4,6 @@
     <title>WebRTC Group Call</title>
 </head>
 <body>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
     <script>
         const signalingServerUrl = 'wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8080.app.github.dev/ws';
         const peerConnections = {};
@@ -26,9 +24,9 @@
         };
 
         ws.onopen = () => {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
-                    document.getElementById('localVideo').srcObject = stream;
+                    // Store local audio stream
                     localStream = stream;
 
                     // Broadcast a new user joining the call
@@ -39,15 +37,11 @@
 
         function handleOffer(offer, from) {
             const pc = new RTCPeerConnection();
-            peerConnections[from] = pc;
 
+            // Add local audio tracks to peer connection
             localStream.getTracks().forEach(track => {
                 pc.addTrack(track, localStream);
             });
-
-            pc.ontrack = (event) => {
-                document.getElementById('remoteVideo').srcObject = event.streams[0];
-            };
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
