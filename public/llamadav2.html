@@ -20,7 +20,7 @@ const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
 const roomInput = document.getElementById('roomInput');
 const remoteAudio = document.getElementById('remoteAudio');
-let peerConnections = {};
+let peerConnections = {}; // Para almacenar múltiples conexiones
 let signalingServer;
 let roomID = '';
 
@@ -42,8 +42,10 @@ joinRoomButton.onclick = async () => {
 
     signalingServer.onmessage = async (message) => {
         const data = JSON.parse(message.data);
+        console.log("Signaling message received:", data);
 
         if (data.offer) {
+            // Crear una nueva conexión para el nuevo par
             const peerConnection = new RTCPeerConnection(configuration);
             peerConnections[data.sender] = peerConnection;
 
@@ -59,8 +61,12 @@ joinRoomButton.onclick = async () => {
             };
 
             peerConnection.ontrack = (event) => {
+                console.log("Remote track received from:", data.sender);
                 if (event.track.kind === 'audio') {
-                    remoteAudio.srcObject = event.streams[0];
+                    // Configurar el audio remoto para reproducirse
+                    const remoteStream = new MediaStream();
+                    remoteStream.addTrack(event.track);
+                    remoteAudio.srcObject = remoteStream;
                 }
             };
         } else if (data.answer) {
@@ -86,9 +92,16 @@ joinRoomButton.onclick = async () => {
 };
 
 callButton.onclick = async () => {
+    // Crear una conexión para el propio cliente
     const peerConnection = new RTCPeerConnection(configuration);
+    peerConnections['self'] = peerConnection;
+
     const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    signalingServer.send(JSON.stringify({ offer, sender: 'self' }));
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
@@ -97,16 +110,14 @@ callButton.onclick = async () => {
     };
 
     peerConnection.ontrack = (event) => {
+        console.log("Remote track received from:", 'self');
         if (event.track.kind === 'audio') {
-            remoteAudio.srcObject = event.streams[0];
+            // Configurar el audio remoto para reproducirse
+            const remoteStream = new MediaStream();
+            remoteStream.addTrack(event.track);
+            remoteAudio.srcObject = remoteStream;
         }
     };
-
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    signalingServer.send(JSON.stringify({ offer, sender: 'self' }));
-
-    peerConnections['self'] = peerConnection;
 
     callButton.disabled = true;
     hangupButton.disabled = false;
