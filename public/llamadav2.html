@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFU WebRTC</title>
+</head>
+<body>
+    <h1>WebRTC SFU Example</h1>
+    <button id="joinButton">Unirse a la llamada</button>
+    <div>
+        <h2>Local Video</h2>
+        <video id="localVideo" autoplay playsinline></video>
+    </div>
+    <div>
+        <h2>Remote Video</h2>
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+
+    <script>
+        const joinButton = document.getElementById("joinButton");
+        const localVideo = document.getElementById("localVideo");
+        const remoteVideo = document.getElementById("remoteVideo");
+
+        let localStream;
+        let peerConnection;
+        let signalingSocket;
+        let roomID = "test-room";  // Puedes cambiar esto para usar distintas salas
+
+        const signalingServerURL = "ws://localhost:8080/signal?roomID=" + roomID;
+
+        // Configuración del ICE (puedes personalizar estos servidores STUN/TURN)
+        const iceConfig = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" } // Servidor STUN de Google
+            ]
+        };
+
+        joinButton.onclick = async function() {
+            signalingSocket = new WebSocket(signalingServerURL);
+
+            signalingSocket.onopen = async () => {
+                console.log("Conectado al servidor de señalización");
+                await startLocalStream();
+
+                // Crear PeerConnection
+                peerConnection = new RTCPeerConnection(iceConfig);
+
+                // Manejar eventos ICE
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        signalingSocket.send(JSON.stringify({
+                            type: "candidate",
+                            candidate: event.candidate
+                        }));
+                    }
+                };
+
+                // Manejar pista remota
+                peerConnection.ontrack = (event) => {
+                    console.log("Recibiendo pista remota");
+                    remoteVideo.srcObject = event.streams[0];
+                };
+
+                // Añadir nuestras pistas locales al PeerConnection
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Crear oferta y enviarla al servidor
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                signalingSocket.send(JSON.stringify({ type: "offer", sdp: offer }));
+            };
+
+            signalingSocket.onmessage = async (message) => {
+                const data = JSON.parse(message.data);
+
+                // Manejar respuesta de oferta
+                if (data.type === "answer") {
+                    console.log("Respuesta SDP recibida");
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                }
+
+                // Manejar candidato ICE
+                if (data.type === "candidate") {
+                    console.log("Candidato ICE recibido");
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            };
+        };
+
+        async function startLocalStream() {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localVideo.srcObject = localStream;
+        }
+    </script>
+</body>
+</html>
