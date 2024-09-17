@@ -1,74 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>WebRTC Group Call</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Multipeer Communication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        video {
+            width: 45%;
+            height: auto;
+            margin: 10px;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
+    <h1>WebRTC Multipeer Communication</h1>
+    <input type="text" id="roomID" placeholder="Enter Room ID" />
+    <button id="joinRoom">Join Room</button>
+    <br>
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
+
     <script>
-        const signalingServerUrl = 'wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8080.app.github.dev/ws';
-        const peerConnections = {};
-        const localStream = null;
+        let signalingSocket;
+        let peerConnection;
+        let localStream;
+        const peerConnectionConfig = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
 
-        const ws = new WebSocket(signalingServerUrl);
-
-        ws.onmessage = (message) => {
-            const data = JSON.parse(message.data);
-
-            if (data.offer) {
-                handleOffer(data.offer, data.from);
-            } else if (data.answer) {
-                handleAnswer(data.answer, data.from);
-            } else if (data.iceCandidate) {
-                handleIceCandidate(data.iceCandidate, data.from);
+        document.getElementById('joinRoom').addEventListener('click', () => {
+            const roomID = document.getElementById('roomID').value;
+            if (roomID) {
+                start(roomID);
+            } else {
+                alert('Please enter a Room ID');
             }
-        };
+        });
 
-        ws.onopen = () => {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    // Store local audio stream
-                    localStream = stream;
+        // Función para iniciar la conexión
+        async function start(roomID) {
+            const signalingServerUrl = `wss:///turbo-eureka-6v4vgrg4jxpc4v7x-8081.app.github.dev/signal/${roomID}`;
 
-                    // Broadcast a new user joining the call
-                    ws.send(JSON.stringify({ type: 'newUser' }));
-                })
-                .catch(error => console.error('Error accessing media devices.', error));
-        };
+            signalingSocket = new WebSocket(signalingServerUrl);
 
-        function handleOffer(offer, from) {
-            const pc = new RTCPeerConnection();
+            signalingSocket.onmessage = async (message) => {
+                const data = JSON.parse(message.data);
 
-            // Add local audio tracks to peer connection
-            localStream.getTracks().forEach(track => {
-                pc.addTrack(track, localStream);
-            });
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    ws.send(JSON.stringify({
-                        iceCandidate: event.candidate,
-                        to: from
-                    }));
+                switch (data.type) {
+                    case 'offer':
+                        await handleOffer(data.offer);
+                        break;
+                    case 'answer':
+                        await handleAnswer(data.answer);
+                        break;
+                    case 'candidate':
+                        await handleCandidate(data.candidate);
+                        break;
                 }
             };
 
-            pc.setRemoteDescription(new RTCSessionDescription(offer))
-                .then(() => pc.createAnswer())
-                .then(answer => pc.setLocalDescription(answer))
-                .then(() => {
-                    ws.send(JSON.stringify({
-                        answer: pc.localDescription,
-                        to: from
-                    }));
+            signalingSocket.onopen = async () => {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+
+                peerConnection = new RTCPeerConnection(peerConnectionConfig);
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        signalingSocket.send(JSON.stringify({
+                            type: 'candidate',
+                            candidate: event.candidate
+                        }));
+                    }
+                };
+                peerConnection.ontrack = (event) => {
+                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                };
+
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
                 });
+
+                // Enviar oferta al servidor de señalización
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                signalingSocket.send(JSON.stringify({
+                    type: 'offer',
+                    offer: offer
+                }));
+            };
         }
 
-        function handleAnswer(answer, from) {
-            peerConnections[from].setRemoteDescription(new RTCSessionDescription(answer));
+        // Manejar la oferta recibida
+        async function handleOffer(offer) {
+            peerConnection = new RTCPeerConnection(peerConnectionConfig);
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalingSocket.send(JSON.stringify({
+                        type: 'candidate',
+                        candidate: event.candidate
+                    }));
+                }
+            };
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remoteVideo').srcObject = event.streams[0];
+            };
+
+            peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            signalingSocket.send(JSON.stringify({
+                type: 'answer',
+                answer: answer
+            }));
         }
 
-        function handleIceCandidate(candidate, from) {
-            peerConnections[from].addIceCandidate(new RTCIceCandidate(candidate));
+        // Manejar la respuesta recibida
+        async function handleAnswer(answer) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        }
+
+        // Manejar el candidato ICE recibido
+        async function handleCandidate(candidate) {
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) {
+                console.error('Error al añadir candidato ICE:', e);
+            }
         }
     </script>
 </body>
