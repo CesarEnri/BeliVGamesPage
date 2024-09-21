@@ -20,14 +20,18 @@
 
         function connect() {
             const room = document.getElementById("room").value;
-            //ws = new WebSocket("ws://localhost:8080/ws");
-
-            //ws = new WebSocket("wss://turbo-eureka-6v4vgrg4jxpc4v7x-8080.app.github.dev/ws"); // Usa la IP de la máquina del servidor Go
             ws = new WebSocket("wss://api.belivgames.com/ws");
 
             ws.onopen = function() {
                 // Envía la sala al conectarse
                 ws.send(JSON.stringify(room));
+
+                // Envía pings periódicamente para mantener la conexión activa
+                setInterval(function() {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'ping' }));
+                    }
+                }, 30000); // Envía un ping cada 30 segundos
             };
 
             ws.onmessage = function(event) {
@@ -36,10 +40,14 @@
                 el.innerHTML = `<strong>${message.username}:</strong> ${message.message}`;
                 document.getElementById("messages").appendChild(el);
             };
+
+            ws.onclose = function() {
+                console.log("Conexión cerrada. Reintentando en 5 segundos...");
+                setTimeout(connect, 5000); // Reintentar la conexión después de 5 segundos
+            };
         }
 
         function sendMessage() {
-            //connect()
             const room = document.getElementById("room").value;
             const username = document.getElementById("username").value;
             const message = document.getElementById("message").value;
