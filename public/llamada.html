@@ -26,15 +26,10 @@
 
         const configuration = {
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' }, 
-                {
-                    urls: 'turn:api.belivgames.com:3478', 
-                    username: 'username', 
-                    credential: 'password' 
-                }
+                { urls: 'stun:stun.l.google.com:19302' } // Servidor STUN
             ]
         };
-        
+
         joinRoomButton.onclick = async () => {
             roomID = roomInput.value;
             if (!roomID) {
@@ -43,13 +38,12 @@
             }
 
             // Conectar al servidor WebSocket
-            signalingServer = new WebSocket('wss://api.belivgames.com/signal/' + roomID);
+            signalingServer = new WebSocket('wss:///api.belivgames.com/signal/' + roomID);
 
             signalingServer.onmessage = async (message) => {
                 const data = JSON.parse(message.data);
 
                 if (data.offer) {
-                    if (!peerConnection) createPeerConnection();
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
@@ -66,17 +60,22 @@
             };
 
             signalingServer.onopen = () => {
+                // Habilitar el botón para iniciar la llamada una vez conectado a la sala
                 callButton.disabled = false;
             };
         };
 
-        function createPeerConnection() {
+        callButton.onclick = async () => {
             peerConnection = new RTCPeerConnection(configuration);
 
             // Capturar audio del micrófono
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(localStream => {
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            });
+            const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            // Crear la oferta y enviarla al servidor de señalización
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            signalingServer.send(JSON.stringify({ offer }));
 
             // Manejar ICE Candidates
             peerConnection.onicecandidate = (event) => {
@@ -91,13 +90,7 @@
                     remoteAudio.srcObject = event.streams[0];
                 }
             };
-        }
 
-        callButton.onclick = async () => {
-            createPeerConnection();
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            signalingServer.send(JSON.stringify({ offer }));
             callButton.disabled = true;
             hangupButton.disabled = false;
         };
