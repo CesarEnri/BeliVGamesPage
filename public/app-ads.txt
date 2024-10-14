@@ -1,11 +1,11 @@
-#Updated 20th September
+#Updated 13th June
 #Appodeal
 appodeal.com, 244129, DIRECT
 #BidMachine
 bidmachine.io, 244129, DIRECT
 #AdMob
 #Replace the Publisher_ID below with your Admob Publisher ID
-google.com, Publisher_ID, DIRECT, f08c47fec0942fa0
+google.com, pub-5445493775377511, DIRECT, f08c47fec0942fa0
 #Meta-Audience
 #Replace the Business_ID below with your Meta Business ID
 facebook.com,Business_ID,RESELLER,c3e20eee3f780d68 
