@@ -22,7 +22,11 @@ const router = createRouter({
       name: 'PrivacySpaceSurfers',
       component: PrivacySpaceSurfers
     },
-
+    {
+      path: '/termsofusespacesurfers',
+      name: 'termsofusespacesurfers',
+      component: PrivacySpaceSurfers
+    },
     {
       ...pokemonRoute,
       path: '/pokemons',
