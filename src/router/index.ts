@@ -3,6 +3,7 @@ import HomeView from '../shared/views/HomeView.vue'
 import AboutView from "@/shared/views/AboutView.vue";
 import PrivacySpaceSurfers from "@/shared/views/PrivacySpaceSurfers.vue";
 import {pokemonRoute} from "@/pokemons/router";
+import TermsofuseSpaceSurfers from '@/shared/views/termsofuseSpaceSurfers.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,7 +26,7 @@ const router = createRouter({
     {
       path: '/termsofusespacesurfers',
       name: 'termsofusespacesurfers',
-      component: PrivacySpaceSurfers
+      component: TermsofuseSpaceSurfers
     },
     {
       ...pokemonRoute,
